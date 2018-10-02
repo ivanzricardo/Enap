@@ -40,10 +40,17 @@ dec_gather <- decisoes %>%
 # Qual juiz julga a maior proporção de processos que tratam de drogas ----
 
 juiz_drogas_grupo <- decisoes %>% 
+  filter(!is.na(txt_decisao))%>%
   mutate(txt_decisao = tolower(txt_decisao),
-         droga = str_detect(txt_decisao, "droga|entorpecente|coca[?i]na|maconha")) %>%
+         droga = str_detect(txt_decisao, "droga|entorpecente|coca[?i]na|maconha"), droga=case_when(
+        droga==TRUE ~"droga",
+        droga==FALSE ~"n_droga"
+         )) %>%
   group_by(juiz, droga)%>%
-  summarise(n=n())
+  summarise(n=n())%>%
+  spread(droga, n, fill = 0)
+  mutate(total = droga +n_droga)
+  
 
 prop_droga <- tibble(juiz, n_processos_drogas, n_processos_n_drogas, n_processos_total)
 
