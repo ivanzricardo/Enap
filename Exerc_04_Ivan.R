@@ -39,6 +39,15 @@ dec_gather <- decisoes %>%
 
 # Qual juiz julga a maior proporção de processos que tratam de drogas ----
 
+juiz_drogas_grupo <- decisoes %>% 
+  mutate(txt_decisao = tolower(txt_decisao),
+         droga = str_detect(txt_decisao, "droga|entorpecente|coca[?i]na|maconha")) %>%
+  group_by(juiz, droga)%>%
+  summarise(n=n())
+
+prop_droga <- tibble(juiz, n_processos_drogas, n_processos_n_drogas, n_processos_total)
+
+
 
 # Crie um objeto contendo informações sobre os tamanhos das bancadas dos ----
 # partidos (arquivo `bancadas.rds`), suas respectivas coligações 
