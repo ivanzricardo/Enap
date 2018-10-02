@@ -27,8 +27,15 @@ juiz_drogas_CL <- decisoes %>%
 write_rds(juiz_drogas_CL, "C:/Users/aluno.ENAP/Downloads/Juiz_drogas")
 
 # Faça commit e push do script e do arquivo `.rds` ----
+git config --global user.email 
 
+#Usando o gather
 
+dec_gather <- decisoes %>%
+  filter(!is.na(id_decisao)) %>%
+  select(id_decisao:data_registro) %>%
+  gather(key="variavel", value="valor",-id_decisao) %>%
+  arrange(id_decisao)
 
 # Qual juiz julga a maior proporção de processos que tratam de drogas ----
 
