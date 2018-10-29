@@ -1,0 +1,155 @@
+---
+title: "Qualidade de vida relacionada à saúde no Distrito Federal"
+author: "Ivan Ricardo Zimmermann"
+date: "25 de outubro de 2018"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+## Objeto
+Este trabalho tem como objeto central a qualidade de qualidade de vida relacionada à saúde.
+
+Como definição, a qualidade de qualidade de vida relacionada à saúde pode ser compreendida como o *"valor atribuído à duração da vida, modificado pelos prejuízos, estados funcionais e oportunidades sociais que são influenciados por doença, dano, tratamento ou políticas de saúde."* (Patrick & Erickson, 1993)
+
+## Objetivos
+Com o intuito de estudar os indicadores de qualidade de vida relacionada à saúde e sua relação com a presença de doenças crônicas e fatores socioeconomicos em adultos residentes no Distrito Federal, foram definidos os seguintes objetivos:
+
+- Estabelecer as estimativas de qualidade de vida relacionada à saúde
+- Analisar a relação com a presença de doenças crônicas
+- Analisar a relação com indicadores socioeconomicos
+
+## Contexto
+
+- A qualidade de vida é um indicador e um  objetivo fundamental das políticas de promoção de saúde (Brasil, 2015)
+
+- Dados demonstram que as doenças crônicas estão associadas a impactos negativos na qualidade de vida (Wu, 2014)
+	
+- Adicionalmente, fatores sociodemográficos são modificadores dessas estimativas (Navega, 2007) 
+
+- Obtido com o instrumento EQ-5D, o QALY é um indicador consistente de qualidade de vida relacionada à saúde, disponível em estudos clínicos e de base populacional (Brooks, 1996)
+
+## Métodos
+A presente análise fez uso da base dados da pesquisa "QALY DF". Trata-se de um inquérito populacional com as seguintes caracteríticas:
+
+- Coleta de dados no primeiro semestre de 2012;
+- Amostragem probabilística em dois estágios (setor censitário e domicílio) 
+- Representativa de adultos (18 a 65 anos de idade) residentes nas regiões administrativas do Distrito Federal
+- Coleta de dados sócio, econômico, demográficos e sobre a situação de saúde em entrevistas presenciais
+- Os valores de __QALY__  dentro da escala de __0 (morte)__ a __1 (saúde plena)__
+
+## Métodos
+Para esta análise foram utilizados os seguintes pacotes estatísticos do software R:
+
+- tidyverse
+- survey
+- srvyr
+- foreign
+```{r Pacotes, include=FALSE}
+#Ativar os pacotes necessários
+library(tidyverse)
+library(survey)
+library(srvyr)
+library(foreign)
+#Importar os dados de "https://github.com/ivanzricardo/aulas_ENAP/raw/master/DADOS_QALY_DF_2012.sav"
+dados <-  read.spss(file = "D:\\Ivan\\Analise de dados\\DADOS_QALY_DF_2012.sav", to.data.frame=TRUE)
+```
+
+## Resultados
+A amostra do estudo incluiu um total de __`r nrow(dados)`__ indivíduos com idade média de __`r round(mean(dados$Idade), 2)`__ anos, sem diferenças significativas em relação à representação das classes sociais.
+```{r echo=FALSE}
+plot(dados$classe_social, dados$Idade, col = dados$cores, main="Distribuição da idade e classe social", xlab="Classe social (Critério Brasil)", ylab="Idade", pch=19)
+```
+
+## Resultados
+A amostra teve um índice de de utilidade (QALY) médio de __0,88 (IC95%: 0,87 a 0,89)__ 
+```{r eval=FALSE, include=FALSE}
+QALY <- amostra_expandida <- dados %>% 
+  as_survey(weight = peso_final) %>%
+  summarise(QALY = survey_mean(QALY_BRASIL, vartype = "ci"))
+View(QALY)
+```
+
+```{r echo=FALSE}
+hist(dados$QALY[dados$QALY>0], main = "Distribuição dos indíces de QALY dos entrevistados", xlab = "QALY", ylab = "Frequência")
+```
+
+
+## Resultados
+Um total de __`r sum(dados$doenca_cronica=="Sim")`__ indivíduos referiu ter sido diagnosticado com alguma doença crônica, estando significativamente associados a índices menores de QALY.
+```{r echo=FALSE}
+#Tabela
+qaly_cronica <- amostra_expandida <- dados %>% 
+  as_survey(weight = peso_final) %>%
+  group_by(doenca_cronica) %>%
+  summarise(QALY = survey_mean(QALY_BRASIL, vartype = "ci"))
+
+#Grafico
+qaly_cronica %>%
+  ggplot(aes(x=doenca_cronica, y = QALY, fill = doenca_cronica, color=doenca_cronica,
+             ymax = QALY_upp, ymin = QALY_low)) +
+  geom_bar(stat = "identity",alpha=0.6) +
+  geom_errorbar(width = 0,size=3) +
+  geom_text(aes(label=round(QALY, 2)),hjust=-0.5, vjust=-0.5)+
+  xlab('Presença de doença crônica') + 
+  ylab('QALY') +  
+  ggtitle("Qualidade de vida e a presença de doenças crônicas") +
+  theme(legend.position= "none")
+
+```
+
+## Resultados
+Quando considerado o nível de classe social, é possível observar menores índices de QALY na classe baixa quando comparado à alta. 
+```{r echo=FALSE}
+#Tabela
+qaly_classe <- amostra_expandida <- dados %>% 
+  as_survey(weight = peso_final) %>%
+  mutate(nivel=case_when(
+    classe_social=="A1"~"Alta",
+    classe_social=="A2"~"Alta",
+    classe_social=="B"~"Média",
+    classe_social=="C"~"Baixa",
+    classe_social=="D-E"~"Baixa"
+  )) %>%
+    group_by(nivel) %>%
+  summarise(QALY = survey_mean(QALY_BRASIL, vartype = "ci"))
+
+#Grafico
+qaly_classe %>%
+ggplot(aes(x=reorder(nivel, QALY), y = QALY, fill = nivel, color=nivel,
+           ymax = QALY_upp, ymin = QALY_low)) +
+  geom_bar(stat = "identity",alpha=0.6) +
+  geom_errorbar(width = 0,size=3) +
+  geom_text(aes(label=round(QALY, 2)),hjust=-0.5, vjust=-0.5)+
+  xlab('Classe social') + 
+  ylab('QALY') +  
+  ggtitle("Qualidade de vida de acordo com a classe social") +
+  theme(legend.position="none")
+```
+
+## Resultados
+A distribuição dos índices de QALY apresenta uma tendência de valores menores de acordo com a  presença de doenças crônicas e o aumento da idade dos indivíduos:
+```{r echo=FALSE}
+cores <- ifelse(dados$doenca_cronica == "Sim", "pink", "blue")
+dados$cores <- cores 
+plot(dados$Idade, dados$QALY, col = dados$cores, main="Qualidade de vida de acordo com a idade e presença de doenças crônicas", xlab="Idade", ylab="QALY", pch=19)
+legend(x = 0, y = 8,legend = c("Sem doença","Com doença"), 
+       fill = c("blue","pink"))
+```
+
+## Conclusões
+Com base nos resultados é possível concluir que:
+
+- A maioria da população adulta do Distrito Federal apresenta uma boa percepção de qualidade de vida.  
+- Há uma uma concentração de menores valores de qualidade de vida nas idades mais avançadas
+- A presença de doenças crônicas tem associação significativa com menores índices de qualidade de vida.
+- Quando considerado o nível de classe social, também é possível observar menores índices de QALY nas classes mais baixas.
+- Políticas públicas para promoção da qualidade de vida precisam atuar no envelhecimento, nas doenças crônicas no desenvolvimento socioeconômico.
+
+## Referências bibliográficas
+* <font size="2">Brasil. Ministério da Saúde. Secretaria de Vigilância em Saúde. Secretaria de Atenção à Saúde. Política Nacional de Promoção da Saúde: PNPS: revisão da Portaria MS/GM no 687, de 30 de março de 2006. Brasília: Ministério da Saúde; 2015. 36 p.</font>
+* <font size="2">Brooks R. EuroQol: the current state of play. Health Policy. 1996 Jul;37(1):53-72.</font> 
+* <font size="2">Patrick DL, Erickson P. Concepts of health-related quality of life. In: Murray CJL, editors. Designing and implementing a national burden of disease study. New York: Harvard Center for Population and Development Studies; 1993. p. 82-99.</font>
+* <font size="2">Navega MT, Oishi J. Comparação da qualidade de vida relacionada à saúde entre mulheres na pós-menopausa praticantes de atividade física com e sem osteoporose. Rev Bras Reumatol. 2007 Aug;47(4):258-64.</font> 
+* <font size="2">Wu M, Brazier JE, Kearns B, Relton C, Smith C, Cooper CL. Examining the impact of 11 long-standing health conditions on health-related quality of life using the EQ-5D in a general population sample. Eur J Health Econ. 2014 Jan 10.</font>
